@@ -9,11 +9,12 @@ const model = genAI.getGenerativeModel({ model: "gemini-2.5-flash-lite" });
 export interface ImprovementResult {
     improvedPrompt: string;
     explanation: string;
+    error?: string;
 }
 
 export async function generateImprovedPrompt(prompt: string): Promise<ImprovementResult> {
     if (!process.env.GOOGLE_API_KEY) {
-        throw new Error("Missing GOOGLE_API_KEY environment variable");
+        return { improvedPrompt: "", explanation: "", error: "Missing GOOGLE_API_KEY environment variable" };
     }
 
     const systemPrompt = `
@@ -65,12 +66,15 @@ export async function generateImprovedPrompt(prompt: string): Promise<Improvemen
         };
     } catch (error: any) {
         console.error("FULL ERROR DETAILS:", error);
-        const errorMessage = error.message || "Unknown error occurred";
-        throw new Error(`Generation failed: ${errorMessage}`);
+        return {
+            improvedPrompt: "",
+            explanation: "",
+            error: error.message || "Unknown error occurred"
+        };
     }
 }
 
-export async function generateClarifyingQuestions(currentPrompt: string): Promise<string[]> {
+export async function generateClarifyingQuestions(currentPrompt: string): Promise<{ questions: string[], error?: string }> {
     const systemPrompt = `
     You are an Expert Prompt Engineer.
     Input Prompt: "${currentPrompt}"
@@ -86,10 +90,13 @@ export async function generateClarifyingQuestions(currentPrompt: string): Promis
         const response = await result.response;
         const text = response.text();
         const cleanText = text.replace(/```json/g, "").replace(/```/g, "").trim();
-        return JSON.parse(cleanText) as string[];
-    } catch (error) {
+        return { questions: JSON.parse(cleanText) as string[] };
+    } catch (error: any) {
         console.error("Error generating questions:", error);
-        return ["Who is the target audience?", "What is the tone?", "What is the specific goal?"];
+        return {
+            questions: [],
+            error: error.message || "Failed to generate questions"
+        };
     }
 }
 
@@ -141,8 +148,12 @@ export async function generateRefinedPrompt(originalPrompt: string, questions: s
             improvedPrompt: improvedPrompt || "Failed to refine prompt",
             explanation: parsed.explanation || "No explanation provided"
         };
-    } catch (error) {
+    } catch (error: any) {
         console.error("Error generating refined prompt:", error);
-        throw new Error("Failed to refine prompt");
+        return {
+            improvedPrompt: "",
+            explanation: "",
+            error: error.message || "Failed to refine prompt"
+        };
     }
 }
