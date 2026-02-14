@@ -74,8 +74,9 @@ Format: ${alchemistInput.format}
             setExplanation(result.explanation);
         } catch (err: any) {
             console.error(err);
-            setError("Failed to generate prompt. Please try again.");
-            toast.error("Generation failed");
+            const msg = err.message || "Failed to generate prompt";
+            setError(msg);
+            toast.error(msg);
         } finally {
             setIsLoading(false);
         }

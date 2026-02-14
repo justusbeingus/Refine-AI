@@ -63,9 +63,10 @@ export async function generateImprovedPrompt(prompt: string): Promise<Improvemen
             improvedPrompt: improvedPrompt || "Failed to generate prompt",
             explanation: parsed.explanation || "No explanation provided"
         };
-    } catch (error) {
+    } catch (error: any) {
         console.error("FULL ERROR DETAILS:", error);
-        throw new Error("Failed to improve prompt");
+        const errorMessage = error.message || "Unknown error occurred";
+        throw new Error(`Generation failed: ${errorMessage}`);
     }
 }
 
