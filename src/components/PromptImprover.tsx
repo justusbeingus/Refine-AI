@@ -70,6 +70,11 @@ Format: ${alchemistInput.format}
             }
 
             const result = await generateImprovedPrompt(promptToSend);
+
+            if (result.error) {
+                throw new Error(result.error);
+            }
+
             setImprovedPrompt(result.improvedPrompt);
             setExplanation(result.explanation);
         } catch (err: any) {
@@ -85,12 +90,18 @@ Format: ${alchemistInput.format}
     const handleStartRefinement = async () => {
         setIsLoading(true);
         try {
-            const qs = await generateClarifyingQuestions(improvedPrompt);
-            setQuestions(qs);
-            setAnswers(new Array(qs.length).fill(""));
+            const result = await generateClarifyingQuestions(improvedPrompt);
+
+            if (result.error) {
+                throw new Error(result.error);
+            }
+
+            setQuestions(result.questions);
+            setAnswers(new Array(result.questions.length).fill(""));
             setView("refine"); // Switch to refinement view
         } catch (err: any) {
-            toast.error("Failed to generate questions");
+            console.error(err);
+            toast.error(err.message || "Failed to generate questions");
         } finally {
             setIsLoading(false);
         }
@@ -107,6 +118,11 @@ Format: ${alchemistInput.format}
             }
 
             const result = await generateRefinedPrompt(improvedPrompt, questions, finalAnswers);
+
+            if (result.error) {
+                throw new Error(result.error);
+            }
+
             setImprovedPrompt(result.improvedPrompt);
             setExplanation(result.explanation);
 
@@ -117,7 +133,8 @@ Format: ${alchemistInput.format}
             setAdditionalInstructions("");
             toast.success("Prompt refined successfully!");
         } catch (err: any) {
-            toast.error("Refinement failed");
+            console.error(err);
+            toast.error(err.message || "Refinement failed");
         } finally {
             setIsLoading(false);
         }
