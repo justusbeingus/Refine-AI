@@ -25,7 +25,6 @@ async function findWorkingModel() {
             const model = genAI.getGenerativeModel({ model: modelName });
             const result = await model.generateContent("Test");
             console.log(`✅ SUCCESS: ${modelName} works!`);
-            break; // Stop when we find one
         } catch (error) {
             console.log(`❌ FAILED: ${modelName} - ${error.message.split('\n')[0]}`);
         }

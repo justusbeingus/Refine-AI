@@ -4,12 +4,34 @@ import { GoogleGenerativeAI } from "@google/generative-ai";
 
 // Initialize Gemini API
 const genAI = new GoogleGenerativeAI(process.env.GOOGLE_API_KEY || "");
-const model = genAI.getGenerativeModel({ model: "gemini-2.5-flash" });
 
 export interface ImprovementResult {
     improvedPrompt: string;
     explanation: string;
     error?: string;
+}
+
+const fallbackModels = [
+    "gemini-2.5-flash",
+    "gemini-2.0-flash",
+    "gemini-2.0-flash-lite",
+    "gemma-3-27b-it",
+    "gemma-3-12b-it"
+];
+
+async function generateWithFallback(prompt: string): Promise<string> {
+    for (const modelName of fallbackModels) {
+        try {
+            const model = genAI.getGenerativeModel({ model: modelName });
+            const result = await model.generateContent(prompt);
+            const response = await result.response;
+            return response.text();
+        } catch (error: any) {
+            console.warn(`Model ${modelName} failed:`, error.message);
+            // Continue to the next model in the fallback list
+        }
+    }
+    throw new Error("All AI models are currently experiencing high demand. Please try again later.");
 }
 
 export async function generateImprovedPrompt(prompt: string): Promise<ImprovementResult> {
@@ -44,9 +66,7 @@ export async function generateImprovedPrompt(prompt: string): Promise<Improvemen
   `;
 
     try {
-        const result = await model.generateContent(systemPrompt);
-        const response = await result.response;
-        const text = response.text();
+        const text = await generateWithFallback(systemPrompt);
 
         // Clean up markdown code blocks if present
         const cleanText = text.replace(/```json/g, "").replace(/```/g, "").trim();
@@ -86,16 +106,14 @@ export async function generateClarifyingQuestions(currentPrompt: string): Promis
   `;
 
     try {
-        const result = await model.generateContent(systemPrompt);
-        const response = await result.response;
-        const text = response.text();
+        const text = await generateWithFallback(systemPrompt);
         const cleanText = text.replace(/```json/g, "").replace(/```/g, "").trim();
         return { questions: JSON.parse(cleanText) as string[] };
     } catch (error: any) {
         console.error("Error generating questions:", error);
-        return {
-            questions: [],
-            error: error.message || "Failed to generate questions"
+        return { 
+            questions: [], 
+            error: error.message || "Failed to generate questions" 
         };
     }
 }
@@ -131,9 +149,7 @@ export async function generateRefinedPrompt(originalPrompt: string, questions: s
   `;
 
     try {
-        const result = await model.generateContent(systemPrompt);
-        const response = await result.response;
-        const text = response.text();
+        const text = await generateWithFallback(systemPrompt);
         const cleanText = text.replace(/```json/g, "").replace(/```/g, "").trim();
         const parsed = JSON.parse(cleanText);
 
